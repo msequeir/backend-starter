@@ -9,8 +9,10 @@ export interface PostOptions {
 
 export interface PostDoc extends BaseDoc {
   author: ObjectId;
+  title: string;
   content: string;
   options?: PostOptions;
+  favoriteUsers: ObjectId[];
 }
 
 /**
@@ -26,8 +28,8 @@ export default class PostingConcept {
     this.posts = new DocCollection<PostDoc>(collectionName);
   }
 
-  async create(author: ObjectId, content: string, options?: PostOptions) {
-    const _id = await this.posts.createOne({ author, content, options });
+  async create(author: ObjectId, title: string, content: string, options?: PostOptions) {
+    const _id = await this.posts.createOne({ author, title, content, options, favoriteUsers: [] });
     return { msg: "Post successfully created!", post: await this.posts.readOne({ _id }) };
   }
 
@@ -36,14 +38,28 @@ export default class PostingConcept {
     return await this.posts.readMany({}, { sort: { _id: -1 } });
   }
 
+  async getByAuthorAndTitle(author: ObjectId, searchTitle: string) {
+    const regex = new RegExp(searchTitle, "i");
+    return await this.posts.readMany({ author, title: { $regex: regex } });
+  }
+
+  async getByTitle(searchTitle: string) {
+    const regex = new RegExp(searchTitle, "i");
+    return await this.posts.readMany({ title: { $regex: regex } });
+  }
+
   async getByAuthor(author: ObjectId) {
     return await this.posts.readMany({ author });
   }
 
-  async update(_id: ObjectId, content?: string, options?: PostOptions) {
+  async getPostsByIds(postIds: ObjectId[]) {
+    return await this.posts.readMany({ _id: { $in: postIds } });
+  }
+
+  async update(_id: ObjectId, title?: string, content?: string, options?: PostOptions) {
     // Note that if content or options is undefined, those fields will *not* be updated
     // since undefined values for partialUpdateOne are ignored.
-    await this.posts.partialUpdateOne({ _id }, { content, options });
+    await this.posts.partialUpdateOne({ _id }, { title, content, options });
     return { msg: "Post successfully updated!" };
   }
 
@@ -60,6 +76,39 @@ export default class PostingConcept {
     if (post.author.toString() !== user.toString()) {
       throw new PostAuthorNotMatchError(user, _id);
     }
+  }
+
+  async addFavoriteUser(_id: ObjectId, userId: ObjectId) {
+    // Use this.createOne to add user to favoriteUsers
+    const post = await this.posts.readOne({ _id });
+    if (!post) {
+      throw new NotFoundError(`Post ${_id} does not exist!`);
+    }
+    if (post.favoriteUsers.some((id) => id.equals(userId))) {
+      return { msg: "User has already liked this message" };
+    }
+
+    post.favoriteUsers.push(userId);
+    await this.posts.partialUpdateOne({ _id }, { favoriteUsers: post.favoriteUsers });
+
+    return { msg: "User added to favorites" };
+  }
+
+  async removeFavoriteUser(_id: ObjectId, userId: ObjectId) {
+    const post = await this.posts.readOne({ _id });
+    if (!post) {
+      throw new NotFoundError(`Post ${_id} does not exist!`);
+    }
+
+    const index = post.favoriteUsers.findIndex((id) => id.equals(userId));
+    if (index === -1) {
+      return { msg: "User has not favorited this post" };
+    }
+
+    post.favoriteUsers.splice(index, 1);
+    await this.posts.partialUpdateOne({ _id }, { favoriteUsers: post.favoriteUsers });
+
+    return { msg: "User removed from favorites" };
   }
 }
 

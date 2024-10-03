@@ -51,34 +51,58 @@ const operations: Operation[] = [
     fields: {},
   },
   {
-    name: "Get Users (empty for all)",
-    endpoint: "/api/users/:username",
-    method: "GET",
-    fields: { username: "input" },
-  },
-  {
     name: "Get Posts (empty for all)",
     endpoint: "/api/posts",
     method: "GET",
-    fields: { author: "input" },
+    fields: { author: "input", title: "input" },
   },
   {
     name: "Create Post",
     endpoint: "/api/posts",
     method: "POST",
-    fields: { content: "input" },
+    fields: { title: "input", content: "input" },
   },
   {
     name: "Update Post",
     endpoint: "/api/posts/:id",
     method: "PATCH",
-    fields: { id: "input", content: "input", options: { backgroundColor: "input" } },
+    fields: { id: "input", title: "input", content: "input", options: { backgroundColor: "input" } },
   },
   {
     name: "Delete Post",
     endpoint: "/api/posts/:id",
     method: "DELETE",
     fields: { id: "input" },
+  },
+  {
+    name: "Upvote Post",
+    endpoint: "/api/posts/:id/upvote",
+    method: "POST",
+    fields: { id: "input" },
+  },
+  {
+    name: "Get upvote count",
+    endpoint: "/api/posts/:id/upvote",
+    method: "GET",
+    fields: { id: "input" },
+  },
+  {
+    name: "Favorite Post",
+    endpoint: "/api/posts/:id/favorite",
+    method: "POST",
+    fields: { id: "input" },
+  },
+  {
+    name: "Remove a favorite from a Post",
+    endpoint: "/api/posts/:id/favorite",
+    method: "DELETE",
+    fields: { id: "input" },
+  },
+  {
+    name: "See your favorite posts",
+    endpoint: "/api/favorites",
+    method: "GET",
+    fields: {},
   },
   //
   // ...
