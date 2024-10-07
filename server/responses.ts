@@ -1,5 +1,6 @@
 import { Authing } from "./app";
 import { AlreadyFriendsError, FriendNotFoundError, FriendRequestAlreadyExistsError, FriendRequestDoc, FriendRequestNotFoundError } from "./concepts/friending";
+import { ItineraryDoc } from "./concepts/itinerary";
 import { PostAuthorNotMatchError, PostDoc } from "./concepts/posting";
 import { Router } from "./framework/router";
 
@@ -20,11 +21,30 @@ export default class Responses {
   }
 
   /**
+   * Convert ItineraryDoc into more readable format for the frontend by converting the author id into a username.
+   */
+  static async itinerary(itinerary: ItineraryDoc | null) {
+    if (!itinerary) {
+      return itinerary;
+    }
+    const author = await Authing.getUserById(itinerary.author);
+    return { ...itinerary, author: author.username };
+  }
+
+  /**
    * Same as {@link post} but for an array of PostDoc for improved performance.
    */
   static async posts(posts: PostDoc[]) {
     const authors = await Authing.idsToUsernames(posts.map((post) => post.author));
-    return posts.map((post, i) => ({ ...post, author: authors[i] }));
+    return { posts: posts.map((post, i) => ({ ...post, author: authors[i] })) };
+  }
+
+  /**
+   * Same as {@link itinerary} but for an array of PostDoc for improved performance.
+   */
+  static async itineraries(itineraries: ItineraryDoc[]) {
+    const authors = await Authing.idsToUsernames(itineraries.map((post) => post.author));
+    return { itineraries: itineraries.map((itinerary, i) => ({ ...itinerary, author: authors[i] })) };
   }
 
   /**

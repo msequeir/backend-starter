@@ -10,7 +10,9 @@ export interface PostOptions {
 export interface PostDoc extends BaseDoc {
   author: ObjectId;
   title: string;
-  content: string;
+  tags: string;
+  rating: number;
+  itineraryId: ObjectId;
   options?: PostOptions;
   favoriteUsers: ObjectId[];
 }
@@ -28,8 +30,8 @@ export default class PostingConcept {
     this.posts = new DocCollection<PostDoc>(collectionName);
   }
 
-  async create(author: ObjectId, title: string, content: string, options?: PostOptions) {
-    const _id = await this.posts.createOne({ author, title, content, options, favoriteUsers: [] });
+  async create(author: ObjectId, title: string, tags: string, rating: number, itineraryId: ObjectId, options?: PostOptions) {
+    const _id = await this.posts.createOne({ author, title, tags, rating, itineraryId, options, favoriteUsers: [] });
     return { msg: "Post successfully created!", post: await this.posts.readOne({ _id }) };
   }
 
@@ -56,10 +58,10 @@ export default class PostingConcept {
     return await this.posts.readMany({ _id: { $in: postIds } });
   }
 
-  async update(_id: ObjectId, title?: string, content?: string, options?: PostOptions) {
-    // Note that if content or options is undefined, those fields will *not* be updated
+  async update(_id: ObjectId, title?: string, tags?: string, rating?: number, itineraryId?: ObjectId, options?: PostOptions) {
+    // Note that if tags or options is undefined, those fields will *not* be updated
     // since undefined values for partialUpdateOne are ignored.
-    await this.posts.partialUpdateOne({ _id }, { title, content, options });
+    await this.posts.partialUpdateOne({ _id }, { title, tags, rating, itineraryId, options });
     return { msg: "Post successfully updated!" };
   }
 

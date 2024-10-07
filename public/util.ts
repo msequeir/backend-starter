@@ -60,13 +60,13 @@ const operations: Operation[] = [
     name: "Create Post",
     endpoint: "/api/posts",
     method: "POST",
-    fields: { title: "input", content: "input" },
+    fields: { title: "input", tags: "input", rating: "input", itineraryId: "input" },
   },
   {
     name: "Update Post",
     endpoint: "/api/posts/:id",
     method: "PATCH",
-    fields: { id: "input", title: "input", content: "input", options: { backgroundColor: "input" } },
+    fields: { id: "input", title: "input", tags: "input", rating: "input", itineraryId: "input", options: { backgroundColor: "input" } },
   },
   {
     name: "Delete Post",
@@ -104,6 +104,38 @@ const operations: Operation[] = [
     method: "GET",
     fields: {},
   },
+
+  {
+    name: "Create Itinerary",
+    endpoint: "/api/itineraries",
+    method: "POST",
+    fields: { content: "input" },
+  },
+  {
+    name: "Get Itineraries",
+    endpoint: "/api/itineraries",
+    method: "GET",
+    fields: { author: "input" },
+  },
+  {
+    name: "Get Itinerary by ID",
+    endpoint: "/api/itineraries/:id",
+    method: "GET",
+    fields: { id: "input" },
+  },
+  {
+    name: "Update Itinerary",
+    endpoint: "/api/itineraries/:id",
+    method: "PATCH",
+    fields: { id: "input", content: "input" },
+  },
+  {
+    name: "Delete Itinerary",
+    endpoint: "/api/itineraries/:id",
+    method: "DELETE",
+    fields: { id: "input" },
+  },
+
   //
   // ...
   //

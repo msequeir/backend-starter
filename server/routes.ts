@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Authing, Favoriting, Friending, Posting, Sessioning, Upvoting } from "./app";
+import { Authing, Favoriting, Friending, Itinerary, Posting, Sessioning, Upvoting } from "./app";
 import { PostOptions } from "./concepts/posting";
 import { SessionDoc } from "./concepts/sessioning";
 import Responses from "./responses";
@@ -80,7 +80,7 @@ class Routes {
     // Filter by author and title
     if (author && title) {
       const id = (await Authing.getUserByUsername(author))._id;
-      return await Posting.getByAuthorAndTitle(id, title);
+      posts = await Posting.getByAuthorAndTitle(id, title);
     }
     // Just by author
     else if (author) {
@@ -89,7 +89,7 @@ class Routes {
     }
     // Just by title
     else if (title) {
-      return await Posting.getByTitle(title);
+      posts = await Posting.getByTitle(title);
     }
     // Returns all posts
     else {
@@ -99,18 +99,22 @@ class Routes {
   }
 
   @Router.post("/posts")
-  async createPost(session: SessionDoc, title: string, content: string, options?: PostOptions) {
+  async createPost(session: SessionDoc, title: string, tags: string, rating: number, itineraryId?: string, options?: PostOptions) {
     const user = Sessioning.getUser(session);
-    const created = await Posting.create(user, title, content, options);
+    const iid = new ObjectId(itineraryId);
+
+    const created = await Posting.create(user, title, tags, rating, iid, options);
     return { msg: created.msg, post: await Responses.post(created.post) };
   }
 
   @Router.patch("/posts/:id")
-  async updatePost(session: SessionDoc, id: string, title: string, content?: string, options?: PostOptions) {
+  async updatePost(session: SessionDoc, id: string, title: string, tags?: string, rating?: number, itineraryId?: string, options?: PostOptions) {
     const user = Sessioning.getUser(session);
     const oid = new ObjectId(id);
+    const iid = new ObjectId(itineraryId);
+
     await Posting.assertAuthorIsUser(oid, user);
-    return await Posting.update(oid, title, content, options);
+    return await Posting.update(oid, title, tags, rating, iid, options);
   }
 
   @Router.delete("/posts/:id")
@@ -209,6 +213,62 @@ class Routes {
     }
     const favoritePosts = await Posting.getPostsByIds(favoritePostsIds);
     return { msg: "These are your favorite posts", favorites: favoritePosts };
+  }
+
+  // ITINERARY RELATED
+  @Router.post("/itineraries")
+  async createItinerary(session: SessionDoc, content: string) {
+    const user = Sessioning.getUser(session);
+    const created = await Itinerary.create(user, content);
+
+    // TODO: Double check Reponses.post()...
+    return { msg: created.msg, itinerary: await Responses.itinerary(created.itinerary) };
+  }
+
+  @Router.patch("/itineraries/:id")
+  async updateItinerary(session: SessionDoc, id: string, content: string) {
+    const user = Sessioning.getUser(session);
+    const itineraryOid = new ObjectId(id);
+    await Itinerary.assertAuthorIsUser(itineraryOid, user); // Need to double check why we are using posting here
+    return await Itinerary.updateItinerary(itineraryOid, content);
+  }
+
+  @Router.delete("/itineraries/:id")
+  async deleteItinerary(session: SessionDoc, id: string) {
+    const user = Sessioning.getUser(session);
+    const oid = new ObjectId(id);
+    await Itinerary.assertAuthorIsUser(oid, user);
+    return Itinerary.deleteItinerary(oid);
+  }
+
+  // @Router.get("/posts/:postId/itineraries")
+  // async getItinerariesByPost(session: SessionDoc, postId: string) {
+  //   const postOid = new ObjectId(postId);
+
+  //   // Fetch all itineraries associated with the post
+  //   const itineraries = await Itinerary.getItineraryById(postOid);
+  //   return { msg: "Itineraries retrieved successfully", itineraries };
+  // }
+
+  @Router.get("/itineraries/:id")
+  async getItineraryById(session: SessionDoc, id: string) {
+    const itineraryOid = new ObjectId(id);
+
+    // Fetch the itinerary by its ID
+    const itinerary = await Itinerary.getItineraryById(itineraryOid);
+    return Responses.itinerary(itinerary);
+  }
+
+  // POSTING RELATED
+  @Router.get("/itineraries")
+  @Router.validate(z.object({ author: z.string().optional(), title: z.string().optional() }))
+  async getItineraries(author?: string, title?: string) {
+    if (author) {
+      const id = (await Authing.getUserByUsername(author))._id; // TODO: Why is this bugging?
+      return await Itinerary.getByAuthor(id);
+    }
+    const itineraries = await Itinerary.getAllItineraries();
+    return Responses.itineraries(itineraries);
   }
 }
 
