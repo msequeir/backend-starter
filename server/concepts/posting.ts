@@ -65,8 +65,16 @@ export default class PostingConcept {
 
     const postsWithItineraries = await Promise.all(
       posts.map(async (post) => {
-        const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
-        return { ...post, itinerary };
+        try {
+          const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
+          return { ...post, itinerary };
+        } catch (error) {
+          // If itinerary is missing, return a fallback message
+          return {
+            ...post,
+            itinerary: { msg: "Itinerary deleted or not found", itineraryId: post.itineraryId },
+          };
+        }
       }),
     );
 
@@ -76,10 +84,19 @@ export default class PostingConcept {
   async getByTitle(searchTitle: string) {
     const regex = new RegExp(searchTitle, "i");
     const posts = await this.posts.readMany({ title: { $regex: regex } });
+
     const postsWithItineraries = await Promise.all(
       posts.map(async (post) => {
-        const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
-        return { ...post, itinerary };
+        try {
+          const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
+          return { ...post, itinerary };
+        } catch (error) {
+          // If itinerary is missing, return a fallback message
+          return {
+            ...post,
+            itinerary: { msg: "Itinerary deleted or not found", itineraryId: post.itineraryId },
+          };
+        }
       }),
     );
 
@@ -91,8 +108,16 @@ export default class PostingConcept {
 
     const postsWithItineraries = await Promise.all(
       posts.map(async (post) => {
-        const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
-        return { ...post, itinerary };
+        try {
+          const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
+          return { ...post, itinerary };
+        } catch (error) {
+          // If itinerary is missing, return a fallback message
+          return {
+            ...post,
+            itinerary: { msg: "Itinerary deleted or not found", itineraryId: post.itineraryId },
+          };
+        }
       }),
     );
 
@@ -104,33 +129,63 @@ export default class PostingConcept {
   }
 
   async update(_id: ObjectId, title?: string, tags?: string, rating?: number, itineraryId?: ObjectId, addImageUrl?: string, removeImageUrl?: string) {
-    // Note that if tags or options is undefined, those fields will *not* be updated
-    // since undefined values for partialUpdateOne are ignored.
-    console.log("Itinerary id", itineraryId);
+    // Find the existing post to retrieve its current values
+    const currPost = await this.posts.readOne({ _id });
+    if (!currPost) {
+      throw new NotFoundError(`Post ${_id} does not exist!`);
+    }
+
+    // Check if itineraryId is passed and verify its existence
     if (itineraryId) {
       const itinerary = await this.itineraries.getItineraryById(itineraryId);
-      itineraryId = itinerary._id;
       if (!itinerary) {
         throw new NotFoundError(`Itinerary ${itineraryId} does not exist!`);
       }
     }
 
-    const currPost = await this.posts.readOne({ _id });
-    const urlList = currPost?.imageUrls || [];
+    // Handle image URLs updates (add/remove)
+    const urlList = [...(currPost.imageUrls || [])]; // Clone the current image URLs
+
     if (addImageUrl) {
-      urlList?.push(addImageUrl);
+      urlList.push(addImageUrl);
     }
 
     if (removeImageUrl) {
-      const index = urlList?.indexOf(removeImageUrl);
+      const index = urlList.indexOf(removeImageUrl);
       if (index !== -1) {
-        urlList?.splice(index, 1);
+        urlList.splice(index, 1);
       } else {
-        throw new NotAllowedError("Trying to remove url that doesn't exist");
+        throw new NotAllowedError("Trying to remove a URL that doesn't exist");
       }
     }
 
-    await this.posts.partialUpdateOne({ _id }, { title, tags, rating, itineraryId, imageUrls: urlList });
+    // Prepare the update object, but only include fields that are defined
+    const updateData: Partial<PostDoc> = {};
+
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+
+    if (tags !== undefined) {
+      updateData.tags = tags;
+    }
+
+    if (rating !== undefined) {
+      updateData.rating = rating;
+    }
+
+    if (itineraryId !== undefined) {
+      updateData.itineraryId = itineraryId;
+    }
+
+    // Only update imageUrls if they have changed
+    if (addImageUrl || removeImageUrl) {
+      updateData.imageUrls = urlList;
+    }
+
+    // Perform the partial update, only including fields that have changed
+    await this.posts.partialUpdateOne({ _id }, updateData);
+
     return { msg: "Post successfully updated!" };
   }
 
