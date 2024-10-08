@@ -238,10 +238,7 @@ class Routes {
     const itineraryOid = new ObjectId(id);
 
     let collaboratorOid;
-    console.log("Why are we not entering?");
-    console.log(collaboratorId); // FOR SOME REASON THIS IS NOT WORKING??
     if (collaboratorId) {
-      console.log("MADE IT HERE");
       collaboratorOid = new ObjectId(collaboratorId);
     }
 

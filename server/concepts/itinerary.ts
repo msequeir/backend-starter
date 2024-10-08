@@ -71,8 +71,6 @@ export default class ItineraryConcept {
 
   async assertAuthorIsAllowedToEdit(itineraryId: ObjectId, user: ObjectId) {
     const itinerary = await this.getItineraryById(itineraryId);
-    console.log(itinerary.collaborators[0]);
-    console.log("MAYBE", itineraryId.toString == itinerary.collaborators[0].toString);
     if (itinerary.author.toString() !== user.toString()) {
       let seen = false;
       for (const collab of itinerary.collaborators) {

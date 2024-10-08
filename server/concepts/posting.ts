@@ -47,8 +47,16 @@ export default class PostingConcept {
     const posts = await this.posts.readMany({}, { sort: { _id: -1 } });
     const postsWithItineraries = await Promise.all(
       posts.map(async (post) => {
-        const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
-        return { ...post, itinerary };
+        try {
+          const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
+          return { ...post, itinerary };
+        } catch (error) {
+          // If itinerary is missing (e.g., NotFoundError), continue without it
+          return {
+            ...post,
+            itinerary: { msg: "Itinerary deleted or not found", itineraryId: post.itineraryId },
+          };
+        }
       }),
     );
 
