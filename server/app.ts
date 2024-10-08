@@ -10,7 +10,7 @@ import UpvotingConcept from "./concepts/upvoting";
 // and synchronized together in `routes.ts`.
 export const Sessioning = new SessioningConcept();
 export const Authing = new AuthenticatingConcept("users");
-export const Posting = new PostingConcept("posts");
+export const Posting = new PostingConcept("posts", "itineraries");
 export const Friending = new FriendingConcept("friends");
 export const Upvoting = new UpvotingConcept("upvotes");
 export const Favoriting = new FavoritingConcept("favorites");

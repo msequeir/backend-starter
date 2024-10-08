@@ -99,9 +99,10 @@ class Routes {
   }
 
   @Router.post("/posts")
-  async createPost(session: SessionDoc, title: string, tags: string, rating: number, itineraryId?: string, options?: PostOptions) {
+  async createPost(session: SessionDoc, title: string, tags: string, rating: number, itineraryId: string, options?: PostOptions) {
     const user = Sessioning.getUser(session);
     const iid = new ObjectId(itineraryId);
+    await Itinerary.assertAuthorIsAllowedToEdit(iid, user);
 
     const created = await Posting.create(user, title, tags, rating, iid, options);
     return { msg: created.msg, post: await Responses.post(created.post) };
@@ -111,7 +112,13 @@ class Routes {
   async updatePost(session: SessionDoc, id: string, title: string, tags?: string, rating?: number, itineraryId?: string, options?: PostOptions) {
     const user = Sessioning.getUser(session);
     const oid = new ObjectId(id);
-    const iid = new ObjectId(itineraryId);
+
+    let iid;
+    if (itineraryId) {
+      iid = new ObjectId(itineraryId);
+      // Check if the itinerary exists and belongs to the user
+      await Itinerary.assertAuthorIsAllowedToEdit(iid, user);
+    }
 
     await Posting.assertAuthorIsUser(oid, user);
     return await Posting.update(oid, title, tags, rating, iid, options);
@@ -226,29 +233,30 @@ class Routes {
   }
 
   @Router.patch("/itineraries/:id")
-  async updateItinerary(session: SessionDoc, id: string, content: string) {
+  async updateItinerary(session: SessionDoc, id: string, collaboratorId?: string, content?: string) {
     const user = Sessioning.getUser(session);
     const itineraryOid = new ObjectId(id);
-    await Itinerary.assertAuthorIsUser(itineraryOid, user); // Need to double check why we are using posting here
-    return await Itinerary.updateItinerary(itineraryOid, content);
+
+    let collaboratorOid;
+    console.log("Why are we not entering?");
+    console.log(collaboratorId); // FOR SOME REASON THIS IS NOT WORKING??
+    if (collaboratorId) {
+      console.log("MADE IT HERE");
+      collaboratorOid = new ObjectId(collaboratorId);
+    }
+
+    await Itinerary.assertAuthorIsAllowedToEdit(itineraryOid, user); // Ensure the user is the owner
+    return await Itinerary.updateItinerary(itineraryOid, collaboratorOid, content);
   }
 
   @Router.delete("/itineraries/:id")
   async deleteItinerary(session: SessionDoc, id: string) {
     const user = Sessioning.getUser(session);
     const oid = new ObjectId(id);
-    await Itinerary.assertAuthorIsUser(oid, user);
+
+    await Itinerary.assertAuthorIsAllowedToEdit(oid, user); // Ensure the user is the owner
     return Itinerary.deleteItinerary(oid);
   }
-
-  // @Router.get("/posts/:postId/itineraries")
-  // async getItinerariesByPost(session: SessionDoc, postId: string) {
-  //   const postOid = new ObjectId(postId);
-
-  //   // Fetch all itineraries associated with the post
-  //   const itineraries = await Itinerary.getItineraryById(postOid);
-  //   return { msg: "Itineraries retrieved successfully", itineraries };
-  // }
 
   @Router.get("/itineraries/:id")
   async getItineraryById(session: SessionDoc, id: string) {

@@ -2,26 +2,10 @@ import { ObjectId } from "mongodb";
 import DocCollection, { BaseDoc } from "../framework/doc";
 import { NotAllowedError, NotFoundError } from "./errors";
 
-// export interface ItineraryStop {
-//   location: string;
-//   activity?: string;
-//   date: Date;
-//   notes?: string;
-// }
-
-// export interface ItineraryDoc extends BaseDoc {
-//   author: ObjectId;
-//   stops: ItineraryStop[];
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
-
 export interface ItineraryDoc extends BaseDoc {
-  author: ObjectId;
-  // date: Date;
+  author: ObjectId; // Original creator
+  collaborators: ObjectId[]; // Other editors
   content: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 /**
  * concept: Posting [Author]
@@ -37,8 +21,7 @@ export default class ItineraryConcept {
   }
 
   async create(author: ObjectId, content: string) {
-    const createdAt = new Date();
-    const _id = await this.itineraries.createOne({ author, content, createdAt, updatedAt: createdAt });
+    const _id = await this.itineraries.createOne({ author, collaborators: [], content });
     return { msg: "Itinerary successfully created!", itinerary: await this.itineraries.readOne({ _id }) };
   }
 
@@ -58,12 +41,27 @@ export default class ItineraryConcept {
     return itinerary;
   }
 
-  async updateItinerary(itineraryId: ObjectId, content?: string) {
-    const updatedAt = new Date();
-    const updatedData: Partial<ItineraryDoc> = { updatedAt };
+  async updateItinerary(itineraryId: ObjectId, collaboratorId?: ObjectId, content?: string) {
+    if (!collaboratorId && !content) {
+      throw new Error("At least one field (collaboratorId or content) must be provided to update.");
+    }
+
+    const updatedData: Partial<ItineraryDoc> = {};
+
+    const itinerary = await this.getItineraryById(itineraryId);
+
+    // Ensure collaborators is always an array
+    itinerary.collaborators = Array.isArray(itinerary.collaborators) ? itinerary.collaborators : [];
+
     if (content) updatedData.content = content;
-    const _id = await this.itineraries.partialUpdateOne({ _id: itineraryId }, updatedData);
-    return { msg: "Itinerary Succesfully Updated!" };
+
+    if (collaboratorId && !itinerary.collaborators.includes(collaboratorId)) {
+      itinerary.collaborators.push(collaboratorId); // Add new collaborator only if not already present
+      updatedData.collaborators = itinerary.collaborators;
+    }
+
+    await this.itineraries.partialUpdateOne({ _id: itineraryId }, updatedData);
+    return { msg: "Itinerary successfully updated!", itinerary: await this.getItineraryById(itineraryId) };
   }
 
   async deleteItinerary(itineraryId: ObjectId) {
@@ -71,33 +69,20 @@ export default class ItineraryConcept {
     return { msg: "Deleted itinerary" };
   }
 
-  async assertAuthorIsUser(_id: ObjectId, user: ObjectId) {
-    const post = await this.itineraries.readOne({ _id });
-    if (!post) {
-      throw new NotFoundError(`Post ${_id} does not exist!`);
-    }
-    if (post.author.toString() !== user.toString()) {
-      throw new ItineraryAuthorNotMatchError(user, _id);
+  async assertAuthorIsAllowedToEdit(itineraryId: ObjectId, user: ObjectId) {
+    const itinerary = await this.getItineraryById(itineraryId);
+    console.log(itinerary.collaborators[0]);
+    console.log("MAYBE", itineraryId.toString == itinerary.collaborators[0].toString);
+    if (itinerary.author.toString() !== user.toString()) {
+      let seen = false;
+      for (const collab of itinerary.collaborators) {
+        if (itineraryId.toString == collab.toString) seen = true;
+      }
+      if (!seen) {
+        throw new ItineraryAuthorNotMatchError(user, itineraryId);
+      }
     }
   }
-
-  // async addStop(itineraryId: ObjectId, stop: ItineraryStop) {
-  //   const itinerary = await this.getItineraryById(itineraryId);
-  //   itinerary.stops.push(stop);
-  //   await this.itineraries.partialUpdateOne({ _id: itineraryId }, { stops: itinerary.stops, updatedAt: new Date() });
-  //   return { msg: "Stop added to itinerary!" };
-  // }
-
-  // async removeStopFromItinerary(itineraryId: ObjectId, stopIndex: number) {
-  //   const itinerary = await this.getItineraryById(itineraryId);
-  //   if (stopIndex < 0 || stopIndex >= itinerary.stops.length) {
-  //     return { msg: "Index out of bounds" };
-  //   }
-
-  //   itinerary.stops.splice(stopIndex, 1);
-  //   await this.itineraries.partialUpdateOne({ _id: itineraryId }, { stops: itinerary.stops, updatedAt: new Date() });
-  //   return { msg: "Stop removed from itinerary!" };
-  // }
 }
 
 export class ItineraryAuthorNotMatchError extends NotAllowedError {
@@ -105,6 +90,6 @@ export class ItineraryAuthorNotMatchError extends NotAllowedError {
     public readonly author: ObjectId,
     public readonly _id: ObjectId,
   ) {
-    super("{0} is not the author of itinerary! {1}!", author, _id);
+    super(`${author} is not the author of itinerary ${_id}!`);
   }
 }

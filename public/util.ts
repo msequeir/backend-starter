@@ -127,7 +127,7 @@ const operations: Operation[] = [
     name: "Update Itinerary",
     endpoint: "/api/itineraries/:id",
     method: "PATCH",
-    fields: { id: "input", content: "input" },
+    fields: { id: "input", collaboratorId: "input", content: "input" },
   },
   {
     name: "Delete Itinerary",
