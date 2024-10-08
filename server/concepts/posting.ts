@@ -4,18 +4,14 @@ import DocCollection, { BaseDoc } from "../framework/doc";
 import { NotAllowedError, NotFoundError } from "./errors";
 import ItineraryConcept from "./itinerary";
 
-export interface PostOptions {
-  backgroundColor?: string;
-}
-
 export interface PostDoc extends BaseDoc {
   author: ObjectId;
   title: string;
   tags: string;
   rating: number;
   itineraryId: ObjectId;
-  options?: PostOptions;
   favoriteUsers: ObjectId[];
+  imageUrls: string[];
 }
 
 /**
@@ -33,12 +29,12 @@ export default class PostingConcept {
     this.itineraries = new ItineraryConcept(itineraryCollectionName);
   }
 
-  async create(author: ObjectId, title: string, tags: string, rating: number, itineraryId: ObjectId, options?: PostOptions) {
+  async create(author: ObjectId, title: string, tags: string, rating: number, itineraryId: ObjectId, imageUrl: string) {
     const itinerary = await this.itineraries.getItineraryById(itineraryId);
     if (!itinerary) {
       throw new NotFoundError(`Itinerary ${itineraryId} does not exist!`);
     }
-    const _id = await this.posts.createOne({ author, title, tags, rating, itineraryId, options, favoriteUsers: [] });
+    const _id = await this.posts.createOne({ author, title, tags, rating, itineraryId, favoriteUsers: [], imageUrls: [imageUrl] });
     return { msg: "Post successfully created!", post: await this.posts.readOne({ _id }) };
   }
 
@@ -107,16 +103,34 @@ export default class PostingConcept {
     return await this.posts.readMany({ _id: { $in: postIds } });
   }
 
-  async update(_id: ObjectId, title?: string, tags?: string, rating?: number, itineraryId?: ObjectId, options?: PostOptions) {
+  async update(_id: ObjectId, title?: string, tags?: string, rating?: number, itineraryId?: ObjectId, addImageUrl?: string, removeImageUrl?: string) {
     // Note that if tags or options is undefined, those fields will *not* be updated
     // since undefined values for partialUpdateOne are ignored.
+    console.log("Itinerary id", itineraryId);
     if (itineraryId) {
       const itinerary = await this.itineraries.getItineraryById(itineraryId);
+      itineraryId = itinerary._id;
       if (!itinerary) {
         throw new NotFoundError(`Itinerary ${itineraryId} does not exist!`);
       }
     }
-    await this.posts.partialUpdateOne({ _id }, { title, tags, rating, itineraryId, options });
+
+    const currPost = await this.posts.readOne({ _id });
+    const urlList = currPost?.imageUrls || [];
+    if (addImageUrl) {
+      urlList?.push(addImageUrl);
+    }
+
+    if (removeImageUrl) {
+      const index = urlList?.indexOf(removeImageUrl);
+      if (index !== -1) {
+        urlList?.splice(index, 1);
+      } else {
+        throw new NotAllowedError("Trying to remove url that doesn't exist");
+      }
+    }
+
+    await this.posts.partialUpdateOne({ _id }, { title, tags, rating, itineraryId, imageUrls: urlList });
     return { msg: "Post successfully updated!" };
   }
 

@@ -3,7 +3,6 @@ import { ObjectId } from "mongodb";
 import { Router, getExpressRouter } from "./framework/router";
 
 import { Authing, Favoriting, Friending, Itinerary, Posting, Sessioning, Upvoting } from "./app";
-import { PostOptions } from "./concepts/posting";
 import { SessionDoc } from "./concepts/sessioning";
 import Responses from "./responses";
 
@@ -99,17 +98,17 @@ class Routes {
   }
 
   @Router.post("/posts")
-  async createPost(session: SessionDoc, title: string, tags: string, rating: number, itineraryId: string, options?: PostOptions) {
+  async createPost(session: SessionDoc, title: string, tags: string, rating: number, itineraryId: string, imageUrl: string) {
     const user = Sessioning.getUser(session);
     const iid = new ObjectId(itineraryId);
     await Itinerary.assertAuthorIsAllowedToEdit(iid, user);
 
-    const created = await Posting.create(user, title, tags, rating, iid, options);
+    const created = await Posting.create(user, title, tags, rating, iid, imageUrl);
     return { msg: created.msg, post: await Responses.post(created.post) };
   }
 
   @Router.patch("/posts/:id")
-  async updatePost(session: SessionDoc, id: string, title: string, tags?: string, rating?: number, itineraryId?: string, options?: PostOptions) {
+  async updatePost(session: SessionDoc, id: string, title: string, tags?: string, rating?: number, itineraryId?: string, addImage?: string, removeImage?: string) {
     const user = Sessioning.getUser(session);
     const oid = new ObjectId(id);
 
@@ -121,7 +120,7 @@ class Routes {
     }
 
     await Posting.assertAuthorIsUser(oid, user);
-    return await Posting.update(oid, title, tags, rating, iid, options);
+    return await Posting.update(oid, title, tags, rating, iid, addImage, removeImage);
   }
 
   @Router.delete("/posts/:id")

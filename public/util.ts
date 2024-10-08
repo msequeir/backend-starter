@@ -60,13 +60,13 @@ const operations: Operation[] = [
     name: "Create Post",
     endpoint: "/api/posts",
     method: "POST",
-    fields: { title: "input", tags: "input", rating: "input", itineraryId: "input" },
+    fields: { title: "input", tags: "input", rating: "input", itineraryId: "input", imageUrl: "input" },
   },
   {
     name: "Update Post",
     endpoint: "/api/posts/:id",
     method: "PATCH",
-    fields: { id: "input", title: "input", tags: "input", rating: "input", itineraryId: "input", options: { backgroundColor: "input" } },
+    fields: { id: "input", title: "input", tags: "input", rating: "input", itineraryId: "input", addImage: "input", removeImage: "input" },
   },
   {
     name: "Delete Post",
