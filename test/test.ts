@@ -13,6 +13,7 @@ import type { SessionDoc } from "../server/concepts/sessioning";
 // Test mode must be set before importing the routes
 import { app } from "../server/routes";
 
+import PostingConcept from "concepts/posting";
 import db, { client } from "../server/db";
 if (db.databaseName !== "test-db") {
   throw new Error("Not connected to test database");
@@ -23,6 +24,9 @@ function getEmptySession() {
   return { cookie: {} } as SessionDoc;
 }
 
+// Global variable to hold the posting instance
+let posting: PostingConcept;
+
 // Before each test...
 beforeEach(async () => {
   // Drop the test database
@@ -31,6 +35,9 @@ beforeEach(async () => {
   // Add some default users we can use
   await app.createUser(getEmptySession(), "alice", "alice123");
   await app.createUser(getEmptySession(), "bob", "bob123");
+
+  // Initialize PostingConcept
+  posting = new PostingConcept("posts", "itineraries");
 });
 
 // After all tests are done...
@@ -67,3 +74,18 @@ describe("Create a user and log in", () => {
 /*
  * As you add more tests, remember to put them inside `describe` blocks.
  */
+
+// describe("Posting Functionality", () => {
+//   it("should create a post", async () => {
+//     const authorId = new ObjectId();
+//     const itineraryId = new ObjectId();
+
+//     // Create a mock itinerary since a post requires an itinerary
+//     await posting.itineraries.create(authorId, "Sample Itinerary");
+
+//     const result = await posting.create(authorId, "Post Title", "tags", 5, itineraryId, "http://example.com/image.jpg");
+//     assert(result.post, "Post should be created successfully");
+//     assert(result.post.title === "Post Title", "Title should match");
+//     assert(result.post.imageUrls.length === 1, "Image URL should be added");
+//   });
+// });
