@@ -135,10 +135,6 @@ const operations: Operation[] = [
     method: "DELETE",
     fields: { id: "input" },
   },
-
-  //
-  // ...
-  //
 ];
 
 /*

@@ -10,7 +10,6 @@ export interface PostDoc extends BaseDoc {
   tags: string;
   rating: number;
   itineraryId: ObjectId;
-  favoriteUsers: ObjectId[];
   imageUrls: string[];
 }
 
@@ -34,7 +33,7 @@ export default class PostingConcept {
     if (!itinerary) {
       throw new NotFoundError(`Itinerary ${itineraryId} does not exist!`);
     }
-    const _id = await this.posts.createOne({ author, title, tags, rating, itineraryId, favoriteUsers: [], imageUrls: [imageUrl] });
+    const _id = await this.posts.createOne({ author, title, tags, rating, itineraryId, imageUrls: [imageUrl] });
     return { msg: "Post successfully created!", post: await this.posts.readOne({ _id }) };
   }
 
@@ -125,7 +124,24 @@ export default class PostingConcept {
   }
 
   async getPostsByIds(postIds: ObjectId[]) {
-    return await this.posts.readMany({ _id: { $in: postIds } });
+    const posts = await this.posts.readMany({ _id: { $in: postIds } });
+
+    const postsWithItineraries = await Promise.all(
+      posts.map(async (post) => {
+        try {
+          const itinerary = await this.itineraries.getItineraryById(post.itineraryId);
+          return { ...post, itinerary };
+        } catch (error) {
+          // If itinerary is missing, return a fallback message
+          return {
+            ...post,
+            itinerary: { msg: "Itinerary deleted or not found", itineraryId: post.itineraryId },
+          };
+        }
+      }),
+    );
+
+    return postsWithItineraries;
   }
 
   async update(_id: ObjectId, title?: string, tags?: string, rating?: number, itineraryId?: ObjectId, addImageUrl?: string, removeImageUrl?: string) {
@@ -202,39 +218,6 @@ export default class PostingConcept {
     if (post.author.toString() !== user.toString()) {
       throw new PostAuthorNotMatchError(user, _id);
     }
-  }
-
-  async addFavoriteUser(_id: ObjectId, userId: ObjectId) {
-    // Use this.createOne to add user to favoriteUsers
-    const post = await this.posts.readOne({ _id });
-    if (!post) {
-      throw new NotFoundError(`Post ${_id} does not exist!`);
-    }
-    if (post.favoriteUsers.some((id) => id.equals(userId))) {
-      return { msg: "User has already liked this message" };
-    }
-
-    post.favoriteUsers.push(userId);
-    await this.posts.partialUpdateOne({ _id }, { favoriteUsers: post.favoriteUsers });
-
-    return { msg: "User added to favorites" };
-  }
-
-  async removeFavoriteUser(_id: ObjectId, userId: ObjectId) {
-    const post = await this.posts.readOne({ _id });
-    if (!post) {
-      throw new NotFoundError(`Post ${_id} does not exist!`);
-    }
-
-    const index = post.favoriteUsers.findIndex((id) => id.equals(userId));
-    if (index === -1) {
-      return { msg: "User has not favorited this post" };
-    }
-
-    post.favoriteUsers.splice(index, 1);
-    await this.posts.partialUpdateOne({ _id }, { favoriteUsers: post.favoriteUsers });
-
-    return { msg: "User removed from favorites" };
   }
 }
 
